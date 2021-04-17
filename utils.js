@@ -1,5 +1,6 @@
 const path = require('path');
 const Y = require('yjs')
+const { yDocToProsemirrorJSON } = require('y-prosemirror');
 const syncProtocol = require('y-protocols/dist/sync.cjs')
 const awarenessProtocol = require('y-protocols/dist/awareness.cjs')
 
@@ -24,44 +25,35 @@ const wsReadyStateClosed = 3 // eslint-disable-line
 // disable gc when using snapshots!
 const gcEnabled = process.env.GC !== 'false' && process.env.GC !== '0'
 const persistenceDir = path.resolve(__dirname, "persistence");
-/**
- * @type {{bindState: function(string,WSSharedDoc):void, writeState:function(string,WSSharedDoc):Promise<any>, provider: any}|null}
- */
-console.info('Persisting documents to "' + persistenceDir + '"')
-  // @ts-ignore
-  const LeveldbPersistence = require('y-leveldb').LeveldbPersistence
-  const ldb = new LeveldbPersistence(persistenceDir)
-  persistence = {
-    provider: ldb,
-    bindState: async (docName, ydoc) => {
-      const persistedYdoc = await ldb.getYDoc(docName)
-      const newUpdates = Y.encodeStateAsUpdate(ydoc)
-      ldb.storeUpdate(docName, newUpdates)
-      Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYdoc))
-      ydoc.on('update', update => {
-        ldb.storeUpdate(docName, update)
-      })
-    },
-    writeState: async (docName, ydoc) => {}
-  }
+const LeveldbPersistence = require('y-leveldb').LeveldbPersistence
+const ldb = new LeveldbPersistence(persistenceDir)
 
-/**
- * @param {{bindState: function(string,WSSharedDoc):void,
- * writeState:function(string,WSSharedDoc):Promise<any>,provider:any}|null} persistence_
- */
+persistence = {
+  provider: ldb,
+  bindState: async (docName, ydoc) => {
+    const persistedYdoc = await ldb.getYDoc(docName)
+    const newUpdates = Y.encodeStateAsUpdate(ydoc)
+    ldb.storeUpdate(docName, newUpdates)
+    Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYdoc))
+    ydoc.on('update', update => {
+      ldb.storeUpdate(docName, update)
+    })
+  },
+  writeState: async (docName, ydoc) => { /** todo */ },
+}
+console.info('[INFO] Persisting documents to "' + persistenceDir + '"');
+
 exports.setPersistence = persistence_ => {
   persistence = persistence_
 }
-
-/**
- * @return {null|{bindState: function(string,WSSharedDoc):void,
-  * writeState:function(string,WSSharedDoc):Promise<any>}|null} used persistence layer
-  */
 exports.getPersistence = () => persistence
+exports.getPersistenceDocPmJsonString = async (docName) => {
+  const persistedYdoc = await ldb.getYDoc(docName);
+  return JSON.stringify(yDocToProsemirrorJSON(persistedYdoc, docName));
+}
 
-/**
- * @type {Map<string,WSSharedDoc>}
- */
+
+/** @type {Map<string,WSSharedDoc>} */
 const docs = new Map()
 // exporting docs so that others can use it
 exports.docs = docs
