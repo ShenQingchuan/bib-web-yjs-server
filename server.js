@@ -6,28 +6,39 @@ const express = require('express');
 const cors = require('cors');
 
 const wss = new WebSocket.Server({ noServer: true });
-const { setupWSConnection, getPersistenceDocPmJsonString } = require('./utils.js');
+const {
+  setupWSConnection,
+  getPersistenceDocPmJsonString,
+  logger
+} = require('./utils.js');
 const app = express();
 
 const host = process.env.HOST || 'localhost';
 const port = process.env.PORT || 2048;
 
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? 'https://bib.techdict.pro'
-    : 'http://localhost:3000'
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? 'https://bib.techdict.pro'
+        : ['http://localhost:3000']
+  })
+);
 
 app.get('/ydoc/:name', (req, resp) => {
   const docName = req.params.name;
-  getPersistenceDocPmJsonString(docName).then(data => {
-    resp.json({
-      responseOk: true,
-      message: '获取 Ydoc 成功！',
-      data
+  getPersistenceDocPmJsonString(docName)
+    .then((data) => {
+      resp.json({
+        responseOk: true,
+        message: `获取文档 ${docName} 成功！`,
+        data
+      });
+    })
+    .catch((err) => {
+      logger.error(`获取文档 ${docName} 失败... ${err}`);
     });
-  });
-})
+});
 
 wss.on('connection', setupWSConnection);
 
@@ -47,5 +58,4 @@ console.log(`
 ╔╗ ┬┌┐   ╦ ╦┬┌─┐  ╔═╗┌─┐┬─┐┬  ┬┌─┐┬─┐
 ╠╩╗│├┴┐  ╚╦╝│└─┐  ╚═╗├┤ ├┬┘└┐┌┘├┤ ├┬┘
 ╚═╝┴└─┘   ╩└┘└─┘  ╚═╝└─┘┴└─ └┘ └─┘┴└─
-Running at '${host}', port ${port}...`
-);
+服务运行端口： '${host}', port ${port}`);

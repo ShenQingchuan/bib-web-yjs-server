@@ -1,6 +1,5 @@
 node_modules/
 persistence/
-temp/
 
 .DS_Store
 *.log
