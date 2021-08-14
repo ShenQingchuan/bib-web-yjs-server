@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//@ts-check
 
 const WebSocket = require('ws');
 const http = require('http');
@@ -13,7 +14,7 @@ const {
 } = require('./utils.js');
 const app = express();
 
-const host = process.env.HOST || 'localhost';
+const host = process.env.HOST || '0.0.0.0';
 const port = process.env.PORT || 2048;
 
 app.use(
